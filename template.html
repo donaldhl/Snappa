@@ -1,0 +1,386 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>SNER 2026 Dashboard</title>
+<style>
+*{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent}
+body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Helvetica,Arial,sans-serif;background:#fff;color:#111827;font-size:14px}
+
+.hdr{padding:14px 16px 10px;border-bottom:1px solid #e5e7eb}
+.hdr h1{font-size:16px;font-weight:600;color:#111827}
+.hdr p{font-size:12px;color:#6b7280;margin-top:3px}
+
+.tabs{display:flex;padding:8px 16px 0;border-bottom:1px solid #e5e7eb;gap:4px;overflow-x:auto}
+.tabs::-webkit-scrollbar{display:none}
+.tab{font-size:13px;padding:7px 16px;border-radius:6px 6px 0 0;border:1px solid transparent;color:#6b7280;background:none;cursor:pointer;white-space:nowrap;flex-shrink:0;-webkit-appearance:none}
+.tab.active{color:#111827;border-color:#e5e7eb;border-bottom-color:#fff;background:#fff;font-weight:500}
+
+.view{display:none;padding:14px 16px}
+.view.active{display:block}
+
+.banner{background:#E1F5EE;border:1px solid #9FE1CB;color:#085041;border-radius:8px;padding:10px 14px;margin-bottom:12px;font-size:13px;line-height:1.5}
+.banner-warn{background:#FAEEDA;border:1px solid #FAC775;color:#633806;border-radius:8px;padding:10px 14px;margin-bottom:12px;font-size:13px;line-height:1.5}
+.banner strong,.banner-warn strong{font-weight:600}
+
+.filter-row{display:flex;gap:6px;margin-bottom:10px;overflow-x:auto;align-items:center;padding-bottom:2px}
+.filter-row::-webkit-scrollbar{display:none}
+.filter-row input{font-size:13px;padding:6px 10px;border-radius:8px;border:1px solid #e5e7eb;background:#f9fafb;color:#111827;outline:none;min-width:140px;flex-shrink:0}
+.chip{font-size:12px;padding:5px 12px;border-radius:20px;border:1px solid #e5e7eb;background:#f9fafb;color:#6b7280;cursor:pointer;white-space:nowrap;flex-shrink:0;-webkit-appearance:none}
+.chip.on{border-color:#374151;color:#111827;background:#f3f4f6;font-weight:500}
+
+.tbl-wrap{border:1px solid #e5e7eb;border-radius:10px;overflow:hidden;margin-bottom:16px;overflow-x:auto;-webkit-overflow-scrolling:touch}
+table{border-collapse:collapse;font-size:12px;width:100%}
+thead tr{background:#f9fafb}
+th{padding:9px 10px;text-align:left;font-size:10px;font-weight:600;color:#6b7280;border-bottom:1px solid #e5e7eb;white-space:nowrap;letter-spacing:.04em;cursor:pointer;user-select:none}
+th.center{text-align:center}
+th.sortable:hover{color:#111827}
+th.asc::after{content:' ↑';color:#6b7280}
+th.desc::after{content:' ↓';color:#6b7280}
+tbody tr{border-top:1px solid #e5e7eb}
+tbody tr:first-child{border-top:none}
+tbody tr:hover,tbody tr:active{background:#f9fafb}
+td{padding:9px 10px;color:#111827;white-space:nowrap;vertical-align:middle}
+td.center{text-align:center}
+td.name{font-weight:600}
+td.dim{color:#6b7280;font-size:12px}
+
+.th-cream{background:#FAEEDA;color:#633806;font-weight:600;text-align:center;font-size:11px;padding:9px 10px;border-bottom:1px solid #FAC775}
+.th-dump{background:#E1F5EE;color:#085041;font-weight:600;text-align:center;font-size:11px;padding:9px 10px;border-bottom:1px solid #9FE1CB}
+.th-fa{background:#EEEDFE;color:#3C3489;font-weight:600;text-align:center;font-size:11px;padding:9px 10px;border-bottom:1px solid #CECBF6}
+td.vc{text-align:center;font-size:12px}
+
+.badge{display:inline-block;font-size:10px;font-weight:600;padding:2px 8px;border-radius:20px;border:1px solid;white-space:nowrap}
+.bc{background:#FAEEDA;color:#633806;border-color:#FAC775}
+.bd{background:#E1F5EE;color:#085041;border-color:#9FE1CB}
+.bf{background:#EEEDFE;color:#3C3489;border-color:#CECBF6}
+
+.medal{display:inline-flex;align-items:center;justify-content:center;width:22px;height:22px;border-radius:50%;font-size:11px;font-weight:700}
+.g1{background:#F5C842;color:#5a3e00}
+.g2{background:#C0C0C0;color:#333}
+.g3{background:#C87941;color:#fff}
+.gn{background:#f3f4f6;color:#9ca3af}
+
+.hi{color:#085041;font-weight:600}
+.lo{color:#791F1F}
+</style>
+</head>
+<body>
+
+<div class="hdr">
+  <h1>SNER 2026 Season — Stats Dashboard</h1>
+  <p>Snappa League · 🥛 Cream Team vs 🥟 Dumplings · March 2026</p>
+</div>
+
+<div class="tabs">
+  <button class="tab active" id="tab-monthly" onclick="st('monthly')">Monthly Stats</button>
+  <button class="tab"        id="tab-teams"   onclick="st('teams')">Team Stats</button>
+  <button class="tab"        id="tab-bids"    onclick="st('bids')">Free Agent Bids</button>
+</div>
+
+<!-- ── TAB 1: MONTHLY ── -->
+<div id="monthly" class="view active">
+  <div class="banner"><strong>Rankings by SNER</strong> — Click any column header to re-sort.</div>
+  <div class="filter-row">
+    <input type="text" id="ms-search" placeholder="Search player…" oninput="renderMonthly()">
+    <button class="chip on"  id="fc-all"   onclick="setMF('all')">All</button>
+    <button class="chip"     id="fc-cream" onclick="setMF('Cream Team')">🥛 Cream</button>
+    <button class="chip"     id="fc-dump"  onclick="setMF('Dumplings')">🥟 Dumplings</button>
+    <button class="chip"     id="fc-fa"    onclick="setMF('Free Agents')">🆓 Free Agents</button>
+  </div>
+  <div class="tbl-wrap">
+    <table>
+      <thead><tr>
+        <th style="width:30px">#</th>
+        <th class="sortable" onclick="msSort('name')"      id="mth-name">Player</th>
+        <th class="sortable" onclick="msSort('team')"      id="mth-team">Team</th>
+        <th class="sortable desc" onclick="msSort('qSNER')"id="mth-qSNER">SNER</th>
+        <th class="sortable" onclick="msSort('fg_pct')"    id="mth-fg_pct">FG %</th>
+        <th class="sortable" onclick="msSort('tfg_pct')"   id="mth-tfg_pct">TFG %</th>
+        <th class="sortable" onclick="msSort('ppg')"       id="mth-ppg">PPG</th>
+        <th class="sortable" onclick="msSort('def_ratio')" id="mth-def_ratio">Def Ratio</th>
+        <th class="sortable" onclick="msSort('bpg')"       id="mth-bpg">BPG</th>
+        <th class="sortable" onclick="msSort('gp')"        id="mth-gp">GP</th>
+      </tr></thead>
+      <tbody id="monthly-body"></tbody>
+    </table>
+  </div>
+</div>
+
+<!-- ── TAB 2: TEAMS ── -->
+<div id="teams" class="view">
+  <div class="banner-warn"><strong>Head-to-head:</strong> Cream Team won 28–13 (68.3% vs 31.7%). Dumplings led in Pts Defended, Beers, and Refs. Cream Team dominated in Shotguns, Sinks, Core SNER, and wins.</div>
+  <div class="tbl-wrap">
+    <table>
+      <thead>
+        <tr>
+          <th style="min-width:130px">Category</th>
+          <th class="th-cream">🥛 Cream Team</th>
+          <th class="th-dump">🥟 Dumplings</th>
+          <th class="th-fa">🆓 Free Agents</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr><td class="dim">Record (W–L)</td><td class="vc hi">28 – 13</td><td class="vc lo">13 – 28</td><td class="vc">N/A</td></tr>
+        <tr><td class="dim">Win %</td><td class="vc hi">68.3%</td><td class="vc lo">31.7%</td><td class="vc">—</td></tr>
+        <tr><td class="dim">Core SNER</td><td class="vc hi">21.97</td><td class="vc">16.46</td><td class="vc">—</td></tr>
+        <tr><td class="dim">FG %</td><td class="vc hi">70.1%</td><td class="vc">67.5%</td><td class="vc">—</td></tr>
+        <tr><td class="dim">TFG %</td><td class="vc hi">33.2%</td><td class="vc">28.6%</td><td class="vc">—</td></tr>
+        <tr><td class="dim">Shotguns</td><td class="vc hi">17</td><td class="vc">15</td><td class="vc">5</td></tr>
+        <tr><td class="dim">Sinks</td><td class="vc hi">10</td><td class="vc">8</td><td class="vc">3</td></tr>
+        <tr><td class="dim">Pts Defended</td><td class="vc">352</td><td class="vc hi">390</td><td class="vc">72</td></tr>
+        <tr><td class="dim">Ex Pts Defended</td><td class="vc hi">32</td><td class="vc">16</td><td class="vc">1</td></tr>
+        <tr><td class="dim">Points Scored</td><td class="vc hi">236</td><td class="vc">176</td><td class="vc">63</td></tr>
+        <tr><td class="dim">Potential Points</td><td class="vc hi">408</td><td class="vc">386</td><td class="vc">88</td></tr>
+        <tr><td class="dim">Beers</td><td class="vc">148</td><td class="vc hi">188</td><td class="vc">59</td></tr>
+        <tr><td class="dim">Refs</td><td class="vc">11</td><td class="vc hi">17</td><td class="vc">13</td></tr>
+        <tr><td class="dim">Bounce Sinks</td><td class="vc">4</td><td class="vc">4</td><td class="vc">1</td></tr>
+        <tr><td class="dim">Qualifiers</td><td class="vc">7</td><td class="vc hi">8</td><td class="vc">—</td></tr>
+      </tbody>
+    </table>
+  </div>
+
+  <div style="font-size:11px;font-weight:600;color:#9ca3af;text-transform:uppercase;letter-spacing:.05em;margin-bottom:8px;margin-top:18px">Individual Stats by Team</div>
+  <div class="filter-row">
+    <button class="chip on" id="tf-all"   onclick="setTF('all')">All</button>
+    <button class="chip"    id="tf-cream" onclick="setTF('Cream Team')">🥛 Cream</button>
+    <button class="chip"    id="tf-dump"  onclick="setTF('Dumplings')">🥟 Dumplings</button>
+    <button class="chip"    id="tf-fa"    onclick="setTF('Free Agents')">🆓 Free Agents</button>
+  </div>
+  <div class="tbl-wrap">
+    <table>
+      <thead><tr>
+        <th class="sortable" onclick="tsSort('name')"       id="tth-name">Player</th>
+        <th class="sortable" onclick="tsSort('team')"       id="tth-team">Team</th>
+        <th class="sortable" onclick="tsSort('gp')"         id="tth-gp">GP</th>
+        <th class="sortable" onclick="tsSort('mp')"         id="tth-mp">Tosses</th>
+        <th class="sortable desc" onclick="tsSort('qSNER')" id="tth-qSNER">SNER</th>
+        <th class="sortable" onclick="tsSort('fg_pct')"     id="tth-fg_pct">FG %</th>
+        <th class="sortable" onclick="tsSort('tfg_pct')"    id="tth-tfg_pct">TFG %</th>
+        <th class="sortable" onclick="tsSort('ppg')"        id="tth-ppg">PPG</th>
+        <th class="sortable" onclick="tsSort('def_ratio')"  id="tth-def_ratio">Def Ratio</th>
+        <th class="sortable" onclick="tsSort('bpg')"        id="tth-bpg">BPG</th>
+        <th class="sortable" onclick="tsSort('sinks')"      id="tth-sinks">Sinks</th>
+        <th class="sortable" onclick="tsSort('pts_def')"    id="tth-pts_def">Pts Def</th>
+        <th class="sortable" onclick="tsSort('ex_pts_def')" id="tth-ex_pts_def">Ex Pts Def</th>
+        <th class="sortable" onclick="tsSort('wr_pct')"     id="tth-wr_pct">Win %</th>
+      </tr></thead>
+      <tbody id="teams-body"></tbody>
+    </table>
+  </div>
+</div>
+
+<!-- ── TAB 3: FREE AGENT BIDS ── -->
+<div id="bids" class="view">
+  <div class="tbl-wrap">
+    <table>
+      <thead>
+        <tr>
+          <th style="min-width:110px">Stat</th>
+          <th class="center" style="min-width:70px">Malorie</th>
+          <th class="center" style="min-width:70px">Kate</th>
+          <th class="center" style="min-width:70px">AJD</th>
+          <th class="center" style="min-width:70px">Su</th>
+          <th class="center" style="min-width:70px">Amy</th>
+        </tr>
+      </thead>
+      <tbody id="bids-body"></tbody>
+    </table>
+  </div>
+</div>
+
+<script>
+var P=[
+  {name:"Derik",       team:"Cream Team",  gp:18,mp:806, sinks:6, qSNER:38.14,ppg:3.89,def_ratio:10.65,bpg:2.47,fg_pct:0.8408,tfg_pct:0.4429,pts_def:205,ex_pts_def:24,wr_pct:0.778},
+  {name:"Don",         team:"Dumplings",   gp:12,mp:587, sinks:4, qSNER:27.90,ppg:3.48,def_ratio:4.97, bpg:3.26,fg_pct:0.7080,tfg_pct:0.4160,pts_def:151,ex_pts_def:7, wr_pct:0.417},
+  {name:"Dan",         team:"Cream Team",  gp:2, mp:68,  sinks:0, qSNER:27.00,ppg:2.37,def_ratio:3.16, bpg:2.37,fg_pct:0.8235,tfg_pct:0.2647,pts_def:2,  ex_pts_def:0, wr_pct:1.000},
+  {name:"Wil",         team:"Cream Team",  gp:14,mp:956, sinks:2, qSNER:24.32,ppg:5.14,def_ratio:1.47, bpg:2.80,fg_pct:0.7295,tfg_pct:0.3524,pts_def:44, ex_pts_def:4, wr_pct:0.714},
+  {name:"Amy",         team:"Free Agents", gp:2, mp:84,  sinks:0, qSNER:24.03,ppg:4.09,def_ratio:null, bpg:1.75,fg_pct:0.6739,tfg_pct:0.2609,pts_def:0,  ex_pts_def:0, wr_pct:0.000},
+  {name:"Anel",        team:"Cream Team",  gp:9, mp:442, sinks:1, qSNER:21.30,ppg:3.00,def_ratio:3.99, bpg:1.55,fg_pct:0.7734,tfg_pct:0.3201,pts_def:78, ex_pts_def:4, wr_pct:0.556},
+  {name:"AJ",          team:"Cream Team",  gp:4, mp:229, sinks:1, qSNER:19.18,ppg:3.08,def_ratio:null, bpg:1.98,fg_pct:0.7541,tfg_pct:0.3443,pts_def:0,  ex_pts_def:0, wr_pct:1.000},
+  {name:"Michael",     team:"Dumplings",   gp:13,mp:789, sinks:2, qSNER:17.81,ppg:3.61,def_ratio:1.62, bpg:3.19,fg_pct:0.6688,tfg_pct:0.2344,pts_def:46, ex_pts_def:0, wr_pct:0.308},
+  {name:"Andrew",      team:"Dumplings",   gp:17,mp:836, sinks:2, qSNER:17.69,ppg:1.95,def_ratio:2.97, bpg:3.01,fg_pct:0.7137,tfg_pct:0.3195,pts_def:141,ex_pts_def:7, wr_pct:0.235},
+  {name:"Will",        team:"Dumplings",   gp:16,mp:715, sinks:0, qSNER:15.07,ppg:1.82,def_ratio:2.90, bpg:1.99,fg_pct:0.7451,tfg_pct:0.2963,pts_def:34, ex_pts_def:2, wr_pct:0.313},
+  {name:"Karina",      team:"Cream Team",  gp:5, mp:221, sinks:0, qSNER:13.77,ppg:2.14,def_ratio:0.00, bpg:0.53,fg_pct:0.6291,tfg_pct:0.3311,pts_def:0,  ex_pts_def:0, wr_pct:0.800},
+  {name:"Malorie",     team:"Free Agents", gp:7, mp:274, sinks:0, qSNER:12.04,ppg:1.78,def_ratio:2.77, bpg:0.81,fg_pct:0.5181,tfg_pct:0.2289,pts_def:22, ex_pts_def:1, wr_pct:0.571},
+  {name:"Alice",       team:"Cream Team",  gp:6, mp:262, sinks:0, qSNER:11.61,ppg:2.24,def_ratio:0.94, bpg:0.84,fg_pct:0.5938,tfg_pct:0.3177,pts_def:9,  ex_pts_def:0, wr_pct:0.500},
+  {name:"Grandpa Juan",team:"Free Agents", gp:1, mp:60,  sinks:1, qSNER:10.11,ppg:1.97,def_ratio:null, bpg:1.31,fg_pct:0.4634,tfg_pct:0.3171,pts_def:0,  ex_pts_def:0, wr_pct:1.000},
+  {name:"Nick",        team:"Dumplings",   gp:5, mp:226, sinks:0, qSNER:6.08, ppg:1.43,def_ratio:0.85, bpg:0.41,fg_pct:0.5076,tfg_pct:0.1818,pts_def:5,  ex_pts_def:0, wr_pct:0.400},
+  {name:"Kate",        team:"Free Agents", gp:4, mp:279, sinks:0, qSNER:6.01, ppg:2.42,def_ratio:0.77, bpg:0.81,fg_pct:0.4800,tfg_pct:0.1200,pts_def:5,  ex_pts_def:0, wr_pct:0.750},
+  {name:"AJD",         team:"Free Agents", gp:8, mp:589, sinks:1, qSNER:5.54, ppg:1.41,def_ratio:1.67, bpg:4.34,fg_pct:0.5363,tfg_pct:0.1250,pts_def:27, ex_pts_def:0, wr_pct:0.125},
+  {name:"Nathan",      team:"Dumplings",   gp:7, mp:521, sinks:0, qSNER:2.59, ppg:1.92,def_ratio:0.50, bpg:2.16,fg_pct:0.5134,tfg_pct:0.1295,pts_def:13, ex_pts_def:0, wr_pct:0.286},
+  {name:"Karl",        team:"Cream Team",  gp:9, mp:568, sinks:0, qSNER:0.97, ppg:0.99,def_ratio:1.16, bpg:2.42,fg_pct:0.3770,tfg_pct:0.1025,pts_def:14, ex_pts_def:0, wr_pct:0.667},
+  {name:"Su",          team:"Free Agents", gp:2, mp:148, sinks:0, qSNER:-0.80,ppg:0.87,def_ratio:0.29, bpg:0.00,fg_pct:0.2581,tfg_pct:0.1452,pts_def:1,  ex_pts_def:0, wr_pct:1.000},
+  {name:"Sungwon",     team:"Dumplings",   gp:1, mp:26,  sinks:0, qSNER:-10.87,ppg:0.00,def_ratio:0.00,bpg:0.00,fg_pct:0.5000,tfg_pct:0.1250,pts_def:0,  ex_pts_def:0, wr_pct:0.000}
+];
+
+var FA_NAMES=['Malorie','Kate','AJD','Su','Amy'];
+var FA=[]; for(var i=0;i<FA_NAMES.length;i++){for(var j=0;j<P.length;j++){if(P[j].name===FA_NAMES[i]){FA.push(P[j]);break;}}}
+
+function f2(v){return (v===null||v===undefined)?null:v.toFixed(2);}
+function fp(v){return (v===null||v===undefined)?null:((v*100).toFixed(2)+'%');}
+var NA='<span style="color:#9ca3af">—</span>';
+function fv(v,fn){return(v===null||v===undefined)?NA:(fn?fn(v):String(v));}
+
+function badge(t){
+  if(t==='Cream Team')return '<span class="badge bc">🥛 Cream</span>';
+  if(t==='Dumplings') return '<span class="badge bd">🥟 Dumps</span>';
+  return '<span class="badge bf">🆓 FA</span>';
+}
+function medal(r){
+  var c=r===1?'g1':r===2?'g2':r===3?'g3':'gn';
+  return '<span class="medal '+c+'">'+r+'</span>';
+}
+function dosort(arr,key,dir){
+  return arr.slice().sort(function(a,b){
+    var av=a[key],bv=b[key];
+    if(av===null&&bv===null)return 0;
+    if(av===null)return 1;
+    if(bv===null)return -1;
+    return(av>bv?1:-1)*dir;
+  });
+}
+function clearTh(prefix){
+  var els=document.querySelectorAll('[id^="'+prefix+'"]');
+  for(var i=0;i<els.length;i++)els[i].classList.remove('asc','desc');
+}
+function markTh(id,dir){
+  var el=document.getElementById(id);
+  if(el)el.classList.add(dir===-1?'desc':'asc');
+}
+
+// ── Monthly ──
+var mF='all',mK='qSNER',mD=-1;
+function setMF(f){
+  mF=f;
+  var map={all:'all',cream:'Cream Team',dump:'Dumplings',fa:'Free Agents'};
+  for(var k in map){
+    var el=document.getElementById('fc-'+k);
+    if(el)el.classList.toggle('on',map[k]===f||(k==='all'&&f==='all'));
+  }
+  renderMonthly();
+}
+function msSort(k){
+  if(mK===k)mD*=-1;else{mK=k;mD=-1;}
+  clearTh('mth-');markTh('mth-'+k,mD);
+  renderMonthly();
+}
+function renderMonthly(){
+  var q=document.getElementById('ms-search').value.toLowerCase();
+  var d=P.slice();
+  if(mF!=='all')d=d.filter(function(p){return p.team===mF;});
+  if(q)d=d.filter(function(p){return p.name.toLowerCase().indexOf(q)!==-1;});
+  d=dosort(d,mK,mD);
+  var rows='';
+  for(var i=0;i<d.length;i++){
+    var p=d[i];
+    rows+='<tr>'+
+      '<td>'+medal(i+1)+'</td>'+
+      '<td class="name">'+p.name+'</td>'+
+      '<td>'+badge(p.team)+'</td>'+
+      '<td style="font-weight:600">'+p.qSNER.toFixed(2)+'</td>'+
+      '<td>'+fp(p.fg_pct)+'</td>'+
+      '<td>'+fp(p.tfg_pct)+'</td>'+
+      '<td>'+p.ppg.toFixed(2)+'</td>'+
+      '<td>'+fv(p.def_ratio,f2)+'</td>'+
+      '<td>'+p.bpg.toFixed(2)+'</td>'+
+      '<td>'+p.gp+'</td>'+
+    '</tr>';
+  }
+  document.getElementById('monthly-body').innerHTML=rows;
+}
+
+// ── Teams ──
+var tF='all',tK='qSNER',tD=-1;
+function setTF(f){
+  tF=f;
+  var map={all:'all',cream:'Cream Team',dump:'Dumplings',fa:'Free Agents'};
+  for(var k in map){
+    var el=document.getElementById('tf-'+k);
+    if(el)el.classList.toggle('on',map[k]===f||(k==='all'&&f==='all'));
+  }
+  renderTeams();
+}
+function tsSort(k){
+  if(tK===k)tD*=-1;else{tK=k;tD=-1;}
+  clearTh('tth-');markTh('tth-'+k,tD);
+  renderTeams();
+}
+function renderTeams(){
+  var d=P.slice();
+  if(tF!=='all')d=d.filter(function(p){return p.team===tF;});
+  d=dosort(d,tK,tD);
+  var rows='';
+  for(var i=0;i<d.length;i++){
+    var p=d[i];
+    rows+='<tr>'+
+      '<td class="name">'+p.name+'</td>'+
+      '<td>'+badge(p.team)+'</td>'+
+      '<td>'+p.gp+'</td>'+
+      '<td>'+p.mp+'</td>'+
+      '<td style="font-weight:600">'+p.qSNER.toFixed(2)+'</td>'+
+      '<td>'+fp(p.fg_pct)+'</td>'+
+      '<td>'+fp(p.tfg_pct)+'</td>'+
+      '<td>'+p.ppg.toFixed(2)+'</td>'+
+      '<td>'+fv(p.def_ratio,f2)+'</td>'+
+      '<td>'+p.bpg.toFixed(2)+'</td>'+
+      '<td>'+p.sinks+'</td>'+
+      '<td>'+p.pts_def+'</td>'+
+      '<td>'+p.ex_pts_def+'</td>'+
+      '<td>'+fp(p.wr_pct)+'</td>'+
+    '</tr>';
+  }
+  document.getElementById('teams-body').innerHTML=rows;
+}
+
+// ── Bids ──
+var BID_STATS=[
+  {label:'SNER',       key:'qSNER',      fn:f2,  bold:true},
+  {label:'FG %',       key:'fg_pct',     fn:fp},
+  {label:'TFG %',      key:'tfg_pct',    fn:fp},
+  {label:'PPG',        key:'ppg',        fn:f2},
+  {label:'Def Ratio',  key:'def_ratio',  fn:f2},
+  {label:'BPG',        key:'bpg',        fn:f2},
+  {label:'GP',         key:'gp',         fn:null},
+  {label:'Tosses',     key:'mp',         fn:null},
+  {label:'Sinks',      key:'sinks',      fn:null},
+  {label:'Pts Def',    key:'pts_def',    fn:null},
+  {label:'Ex Pts Def', key:'ex_pts_def', fn:null},
+  {label:'Win %',      key:'wr_pct',     fn:fp}
+];
+function renderBids(){
+  var rows='';
+  for(var i=0;i<BID_STATS.length;i++){
+    var s=BID_STATS[i];
+    var vals=[]; for(var j=0;j<FA.length;j++){var v=FA[j][s.key];if(v!==null&&v!==undefined)vals.push(v);}
+    var maxVal=vals.length?Math.max.apply(null,vals):null;
+    var cells='';
+    for(var j=0;j<FA.length;j++){
+      var p=FA[j]; var v=p[s.key];
+      var disp=(v===null||v===undefined)?NA:(s.fn?s.fn(v):String(v));
+      var isBest=maxVal!==null&&v===maxVal&&vals.length>1;
+      cells+='<td class="center'+(isBest?' hi':'')+'" style="'+(s.bold?'font-weight:600;':'')+'">'+ disp+'</td>';
+    }
+    rows+='<tr><td class="dim">'+s.label+'</td>'+cells+'</tr>';
+  }
+  document.getElementById('bids-body').innerHTML=rows;
+}
+
+// ── Tab switch ──
+function st(id){
+  var views=document.querySelectorAll('.view');
+  for(var i=0;i<views.length;i++)views[i].classList.remove('active');
+  var tabs=document.querySelectorAll('.tab');
+  for(var i=0;i<tabs.length;i++)tabs[i].classList.remove('active');
+  document.getElementById(id).classList.add('active');
+  document.getElementById('tab-'+id).classList.add('active');
+}
+
+// ── Init ──
+renderMonthly();
+renderTeams();
+renderBids();
+</script>
+</body>
+</html>

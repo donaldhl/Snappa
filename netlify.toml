@@ -1,0 +1,12 @@
+[build]
+  command   = "pip install --quiet --break-system-packages requests && python build.py"
+  publish   = "."
+
+[build.environment]
+  PYTHON_VERSION = "3.11"
+
+# Redirect index.html as the root
+[[redirects]]
+  from = "/"
+  to   = "/index.html"
+  status = 200
