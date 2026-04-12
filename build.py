@@ -393,7 +393,7 @@ def main():
     print("Computing team stats...")
     teams = compute_team_stats(players, match_rows)
 
-    build_date = date.today().strftime("%-m/%-d/%Y")
+    from datetime import datetime import zoneinfo build_date = datetime.now(zoneinfo.ZoneInfo("America/Los_Angeles")).strftime("%-m/%-d/%Y")
 
     print(f"Reading {TEMPLATE_PATH}...")
     with open(TEMPLATE_PATH, encoding="utf-8") as f:
