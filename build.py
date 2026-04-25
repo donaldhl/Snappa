@@ -296,14 +296,10 @@ def inject_data(template_html, players, teams, build_date):
     new_p_block = "var P=[\n" + ",\n".join(p_entries) + "\n];"
     html = re.sub(r'var P=\[.*?\];', new_p_block, template_html, flags=re.DOTALL)
 
-    # ── Qualifiers tab: inject MIN_FGA filter into JS renderMonthly() ─────────
-    html = html.replace(
-        'function renderMonthly(){',
-        f'function renderMonthly(){{var __fga={MIN_FGA};',
-    )
+    # ── Qualifiers tab: filter by MIN_FGA ──────────────────────────────────────
     html = html.replace(
         'var d=P.slice();',
-        'var d=P.filter(function(p){return p.mp>=__fga;});'
+        f'var d=P.filter(function(p){{return p.mp>={MIN_FGA};}});'
     )
 
     # ── FA_NAMES: update to current list ─────────────────────────────────────
@@ -396,9 +392,7 @@ def main():
     print("Computing team stats...")
     teams = compute_team_stats(players, match_rows)
 
-    from datetime import datetime 
-    import zoneinfo 
-    build_date = datetime.now(zoneinfo.ZoneInfo("America/Los_Angeles")).strftime("%-m/%-d/%Y")
+    build_date = date.today().strftime("%-m/%-d/%Y")
 
     print(f"Reading {TEMPLATE_PATH}...")
     with open(TEMPLATE_PATH, encoding="utf-8") as f:
