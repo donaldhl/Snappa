@@ -293,14 +293,17 @@ def inject_data(template_html, players, teams, build_date):
         )
         p_entries.append(entry)
 
-    new_p_block = "var P=[\n" + ",\n".join(p_entries) + "\n];"
-    html = re.sub(r'var P=\[.*?\];', new_p_block, template_html, flags=re.DOTALL)
+    # Build Q array (qualifiers only, FGA >= MIN_FGA) for Qualifiers tab
+    qualified_entries = [e for e, p in zip(p_entries, players) if p["mp"] >= MIN_FGA]
+    new_q_block = "var Q=[\n" + ",\n".join(qualified_entries) + "\n];"
 
-    # ── Qualifiers tab: filter by MIN_FGA ──────────────────────────────────────
-    html = html.replace(
-        'var d=P.slice();',
-        f'var d=P.filter(function(p){{return p.mp>={MIN_FGA};}});'
-    )
+    new_p_block = "var P=[\n" + ",\n".join(p_entries) + "\n];"
+    html = re.sub(r'var P=\[.*?\];', new_p_block + "\n" + new_q_block, template_html, flags=re.DOTALL)
+
+    # Make renderMonthly use Q instead of P
+    html = html.replace('function renderMonthly(){', 'function renderMonthly(){var d=Q.slice();')
+    html = html.replace('  var d=P.slice();', '  // d already set above')
+
 
     # ── FA_NAMES: update to current list ─────────────────────────────────────
     fa_js = "var FA_NAMES=" + json.dumps(FA_NAMES) + ";"
