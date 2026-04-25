@@ -297,10 +297,13 @@ def inject_data(template_html, players, teams, build_date):
     html = re.sub(r'var P=\[.*?\];', new_p_block, template_html, flags=re.DOTALL)
 
     # ── Qualifiers tab: inject MIN_FGA filter into JS renderMonthly() ─────────
-    # Add a qualifier filter inside the existing renderMonthly function
     html = html.replace(
-        'function renderMonthly(){\n  var q=document.getElementById(\'ms-search\').value.toLowerCase();\n  var d=P.slice();',
-        f'function renderMonthly(){{\n  var q=document.getElementById(\'ms-search\').value.toLowerCase();\n  var d=P.filter(function(p){{return p.mp>={MIN_FGA};}});'
+        'function renderMonthly(){',
+        f'function renderMonthly(){{var __fga={MIN_FGA};',
+    )
+    html = html.replace(
+        'var d=P.slice();',
+        'var d=P.filter(function(p){return p.mp>=__fga;});'
     )
 
     # ── FA_NAMES: update to current list ─────────────────────────────────────
