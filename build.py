@@ -288,9 +288,9 @@ def inject_data(template_html, players, teams, build_date):
     new_p_block = "var P=[\n" + ",\n".join(p_entries) + "\n];"
     html = re.sub(r'var P=\[.*?\];', new_p_block + "\n" + new_q_block, template_html, flags=re.DOTALL)
 
-    # Make renderMonthly use Q instead of P
-    html = html.replace('function renderMonthly(){', 'function renderMonthly(){var d=Q.slice();')
-    html = html.replace('  var d=P.slice();', '  // d already set above')
+    # Make renderMonthly use Q instead of P by replacing the P.slice() line
+    html = html.replace('function renderMonthly(){\n  var q=document.getElementById(\'ms-search\').value.toLowerCase();\n  var d=P.slice();',
+                        'function renderMonthly(){\n  var q=document.getElementById(\'ms-search\').value.toLowerCase();\n  var d=Q.slice();')
 
 
     # ── FA_NAMES: update to current list ─────────────────────────────────────
@@ -398,4 +398,5 @@ def main():
     print(f"✅ Done! {len(players)} players, built {build_date}")
 
 if __name__ == "__main__":
+    main()
     main()
