@@ -69,7 +69,7 @@ def compute_player_stats(match_rows):
         name = str(row.get("Player", "")).strip()
         if not name or name.lower() == "player":
             continue
-        gnum = str(row.get("Game", "")).strip()
+        gnum = str(row.get("/", row.get("Game", ""))).strip()
         if name not in stats:
             stats[name] = dict(gp=0, mp=0, on_table=0, off_table=0,
                                points=0, pot_pts=0, bounce_sinks=0, sinks=0,
@@ -99,7 +99,7 @@ def compute_player_stats(match_rows):
     seen_sg = set()
     for row in match_rows:
         sg = str(row.get("Shotgun", "")).strip()
-        gnum = str(row.get("Game", "")).strip()
+        gnum = str(row.get("/", row.get("Game", ""))).strip()
         if sg and gnum and (gnum, sg) not in seen_sg:
             seen_sg.add((gnum, sg))
             shotgun_counts[sg] = shotgun_counts.get(sg, 0) + 1
@@ -216,7 +216,7 @@ def compute_team_stats(players, match_rows):
     seen_sg = set()
     for row in match_rows:
         sg_player = str(row.get("Shotgun", "")).strip()
-        gnum = str(row.get("Game", "")).strip()
+        gnum = str(row.get("/", row.get("Game", ""))).strip()
         if sg_player and gnum and (gnum, sg_player) not in seen_sg:
             seen_sg.add((gnum, sg_player))
             sg_team = str(row.get("Team Shogun", "")).strip()
@@ -225,7 +225,7 @@ def compute_team_stats(players, match_rows):
 
     seen_games = {}
     for row in match_rows:
-        gnum = str(row.get("Game", "")).strip()
+        gnum = str(row.get("/", row.get("Game", ""))).strip()
         team_win = str(row.get("Team Win", "")).strip()
         if gnum and team_win and gnum not in seen_games:
             seen_games[gnum] = team_win
@@ -398,5 +398,4 @@ def main():
     print(f"✅ Done! {len(players)} players, built {build_date}")
 
 if __name__ == "__main__":
-    main()
     main()
