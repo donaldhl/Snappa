@@ -5678,7 +5678,7 @@
       "Extreme Points Defended": "",
       "Points Allowed": "",
       "Total Beers": "",
-      "Win": "",
+      "Win": 1,
       "Technical": 0
     },
     {
@@ -5704,7 +5704,7 @@
       "Extreme Points Defended": "",
       "Points Allowed": "",
       "Total Beers": "",
-      "Win": "",
+      "Win": 0,
       "Technical": 0
     },
     {
@@ -5730,7 +5730,7 @@
       "Extreme Points Defended": "",
       "Points Allowed": "",
       "Total Beers": "",
-      "Win": "",
+      "Win": 1,
       "Technical": 0
     },
     {
@@ -5756,7 +5756,7 @@
       "Extreme Points Defended": "",
       "Points Allowed": "",
       "Total Beers": "",
-      "Win": "",
+      "Win": 0,
       "Technical": 0
     }
   ]
