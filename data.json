@@ -5571,8 +5571,8 @@
       "Bounce Sink": 0,
       "Sink": 0,
       "Points Defended": 3,
-      "Extreme Points Defended": "",
-      "Points Allowed": "",
+      "Extreme Points Defended": 0,
+      "Points Allowed": 0,
       "Total Beers": "",
       "Win": 1,
       "Technical": 0
