@@ -5624,7 +5624,7 @@
       "Sink": 0,
       "Points Defended": 13,
       "Extreme Points Defended": 0,
-      "Points Allowed": "",
+      "Points Allowed": 0,
       "Total Beers": 6,
       "Win": 1,
       "Technical": 0
@@ -5650,7 +5650,7 @@
       "Sink": "",
       "Points Defended": "",
       "Extreme Points Defended": "",
-      "Points Allowed": "",
+      "Points Allowed": 1,
       "Total Beers": 6,
       "Win": 0,
       "Technical": 0
