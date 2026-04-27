@@ -5679,7 +5679,7 @@
       "Points Allowed": "",
       "Total Beers": "",
       "Win": "",
-      "Technical": ""
+      "Technical": 0
     },
     {
       "Game": 55,
@@ -5705,7 +5705,7 @@
       "Points Allowed": "",
       "Total Beers": "",
       "Win": "",
-      "Technical": ""
+      "Technical": 0
     },
     {
       "Game": 55,
@@ -5731,7 +5731,7 @@
       "Points Allowed": "",
       "Total Beers": "",
       "Win": "",
-      "Technical": ""
+      "Technical": 0
     },
     {
       "Game": 55,
@@ -5757,7 +5757,7 @@
       "Points Allowed": "",
       "Total Beers": "",
       "Win": "",
-      "Technical": ""
+      "Technical": 0
     }
   ]
 }
