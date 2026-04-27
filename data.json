@@ -5700,9 +5700,9 @@
       "Potential Points": 7,
       "Bounce Sink": 0,
       "Sink": 0,
-      "Points Defended": "",
-      "Extreme Points Defended": "",
-      "Points Allowed": "",
+      "Points Defended": 6,
+      "Extreme Points Defended": 0,
+      "Points Allowed": 0,
       "Total Beers": 3,
       "Win": 0,
       "Technical": 0
@@ -5728,7 +5728,7 @@
       "Sink": "",
       "Points Defended": "",
       "Extreme Points Defended": "",
-      "Points Allowed": "",
+      "Points Allowed": 2,
       "Total Beers": 1,
       "Win": 1,
       "Technical": 0
@@ -5754,7 +5754,7 @@
       "Sink": "",
       "Points Defended": "",
       "Extreme Points Defended": "",
-      "Points Allowed": "",
+      "Points Allowed": 3,
       "Total Beers": 5,
       "Win": 0,
       "Technical": 0
