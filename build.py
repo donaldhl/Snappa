@@ -22,17 +22,17 @@ TEAM_MAP = {
     "Erik": "Cream",  "Anel": "Cream",  "Jill": "Cream",
     "Dan": "Cream",   "AJ": "Cream",    "Karina": "Cream",
     "Karl": "Cream",  "Malorie": "Cream", "Janet": "Cream",
-    "Amy": "Cream",   "Grandpa Juan": "Cream", "AJD": "Cream",
+    "Amy": "Cream",   "Grandpa Juan": "Cream", "AJD": "Cream", "Eric S": "Cream",
     # Dumplings
     "Andrew": "Dumplings", "Don": "Dumplings",    "Will": "Dumplings",
     "Joey": "Dumplings",   "Michael": "Dumplings", "Ian": "Dumplings",
     "Nathan": "Dumplings", "Audrey": "Dumplings",  "Nick": "Dumplings",
-    "Sungwon": "Dumplings",
+    "Sungwon": "Dumplings", "Jake": "Dumplings", "Sam": "Dumplings", "Su": "Dumplings",
     # FA = everyone else
 }
 
 # Undrafted Free Agents shown in FA Bids tab (rows 32-39 in SNER sheet)
-FA_NAMES = ["Germaine", "Jen S", "Eric S", "Jake", "Sam", "Kate", "Ashley", "Su"]
+FA_NAMES = ["Germaine", "Jen S", "Kate", "Ashley"]
 
 # ── LOAD DATA ─────────────────────────────────────────────────────────────────
 def fetch_sheet_csv(sheet_name):
