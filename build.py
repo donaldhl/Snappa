@@ -15,34 +15,28 @@ DATA_FILE = "data.json"
 # Minimum FGA (on_table + off_table) to appear in Qualifiers tab
 MIN_FGA = 100
 
-# Team assignments — Cream=rows3-17, Dumplings=rows20-29, FA=rows32-39
-TEAM_MAP = {
-    # Cream Team
-    "Derik": "Cream", "Wil": "Cream",  "Alice": "Cream",
-    "Erik": "Cream",  "Anel": "Cream",  "Jill": "Cream",
-    "Dan": "Cream",   "AJ": "Cream",    "Karina": "Cream",
-    "Karl": "Cream",  "Malorie": "Cream", "Janet": "Cream",
-    "Amy": "Cream",   "Grandpa Juan": "Cream", "AJD": "Cream", "Eric S": "Cream",
-    # Dumplings
-    "Andrew": "Dumplings", "Don": "Dumplings",    "Will": "Dumplings",
-    "Joey": "Dumplings",   "Michael": "Dumplings", "Ian": "Dumplings",
-    "Nathan": "Dumplings", "Audrey": "Dumplings",  "Nick": "Dumplings",
-    "Sungwon": "Dumplings", "Jake": "Dumplings", "Sam": "Dumplings", "Su": "Dumplings",
-    # FA = everyone else
-}
-
-# Undrafted Free Agents shown in FA Bids tab (rows 32-39 in SNER sheet)
-FA_NAMES = ["Germaine", "Jen S", "Kate", "Ashley"]
+# Team assignments and FA list — loaded dynamically from data.json
+# (exported by Apps Script from the SNER sheet — no hardcoding needed)
+TEAM_MAP = {}
+FA_NAMES = []
 
 # ── LOAD DATA ─────────────────────────────────────────────────────────────────
 def fetch_sheet_csv(sheet_name):
-    """Read match rows from data.json exported by Google Apps Script."""
+    """Read match rows + team assignments from data.json exported by Google Apps Script."""
+    global TEAM_MAP, FA_NAMES
     if not os.path.exists(DATA_FILE):
         print(f"  ERROR: {DATA_FILE} not found. Run the Apps Script export first.", file=sys.stderr)
         return []
     with open(DATA_FILE, encoding="utf-8") as f:
         data = json.load(f)
     rows = data.get("rows", [])
+    # Load team assignments if present (exported by updated Apps Script)
+    if "team_map" in data:
+        TEAM_MAP = data["team_map"]
+        print(f"  → Loaded {len(TEAM_MAP)} team assignments from {DATA_FILE}")
+    if "fa_names" in data:
+        FA_NAMES = data["fa_names"]
+        print(f"  → Loaded {len(FA_NAMES)} FA names from {DATA_FILE}")
     print(f"  → Loaded {len(rows)} rows from {DATA_FILE}")
     return rows
 
@@ -166,13 +160,14 @@ def compute_player_stats(match_rows):
         p["bpg"]       = round(p["bpg_raw"] * pace_adj, 4) if p["bpg_raw"] is not None else None
         p["def_ratio"] = round(p["def_ratio_raw"] * pace_adj, 4) if p["def_ratio_raw"] is not None else None
 
-    # qSNER = aSNER * (15 / avg_aSNER_of_qualifiers)
-    qualifiers = [p for p in players if p["mp"] >= MIN_FGA]
-    avg_a_sner_q = sum(p["a_sner"] for p in qualifiers) / len(qualifiers) if qualifiers else 1.0
-    if avg_a_sner_q == 0:
-        avg_a_sner_q = 1.0
+    # qSNER = aSNER * (15 / V44) where V44 = AVERAGE of aSNER for all players with GP>0
+    # This matches the sheet formula =AVERAGE(V3:V5,V7,...) which includes all non-DIV/0 rows
+    all_valid = [p for p in players if p["gp"] > 0 and p["mp"] > 0]
+    avg_a_sner_all = sum(p["a_sner"] for p in all_valid) / len(all_valid) if all_valid else 1.0
+    if avg_a_sner_all == 0:
+        avg_a_sner_all = 1.0
     for p in players:
-        p["qSNER"] = round(p["a_sner"] * (15 / avg_a_sner_q), 4)
+        p["qSNER"] = round(p["a_sner"] * (15 / avg_a_sner_all), 4)
 
     # Clean up internal fields
     for p in players:
