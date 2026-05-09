@@ -15,28 +15,37 @@ DATA_FILE = "data.json"
 # Minimum FGA (on_table + off_table) to appear in Qualifiers tab
 MIN_FGA = 100
 
-# Team assignments and FA list — loaded dynamically from data.json
-# (exported by Apps Script from the SNER sheet — no hardcoding needed)
-TEAM_MAP = {}
-FA_NAMES = []
+# Team assignments — update manually when players move between teams
+# Cream Team = rows 3-18, Dumplings = rows 21-33, FA = rows 36-41
+TEAM_MAP = {
+    # Cream Team
+    "Derik": "Cream", "Wil": "Cream",      "Alice": "Cream",
+    "Erik": "Cream",  "Anel": "Cream",      "Jill": "Cream",
+    "Dan": "Cream",   "AJ": "Cream",        "Karina": "Cream",
+    "Karl": "Cream",  "Malorie": "Cream",   "Janet": "Cream",
+    "Amy": "Cream",   "Grandpa Juan": "Cream", "AJD": "Cream",
+    "Eric S": "Cream",
+    # Dumplings
+    "Andrew": "Dumplings", "Don": "Dumplings",    "Will": "Dumplings",
+    "Joey": "Dumplings",   "Michael": "Dumplings", "Ian": "Dumplings",
+    "Nathan": "Dumplings", "Audrey": "Dumplings",  "Nick": "Dumplings",
+    "Sungwon": "Dumplings", "Jake": "Dumplings",   "Sam": "Dumplings",
+    "Su": "Dumplings",
+    # FA = everyone else
+}
+
+# Undrafted Free Agents shown in FA Bids tab
+FA_NAMES = ["Germaine", "Jen S", "Kate", "Ashley", "Gloria", "Liberty"]
 
 # ── LOAD DATA ─────────────────────────────────────────────────────────────────
 def fetch_sheet_csv(sheet_name):
-    """Read match rows + team assignments from data.json exported by Google Apps Script."""
-    global TEAM_MAP, FA_NAMES
+    """Read match rows from data.json exported by Google Apps Script."""
     if not os.path.exists(DATA_FILE):
         print(f"  ERROR: {DATA_FILE} not found. Run the Apps Script export first.", file=sys.stderr)
         return []
     with open(DATA_FILE, encoding="utf-8") as f:
         data = json.load(f)
     rows = data.get("rows", [])
-    # Load team assignments if present (exported by updated Apps Script)
-    if "team_map" in data:
-        TEAM_MAP = data["team_map"]
-        print(f"  → Loaded {len(TEAM_MAP)} team assignments from {DATA_FILE}")
-    if "fa_names" in data:
-        FA_NAMES = data["fa_names"]
-        print(f"  → Loaded {len(FA_NAMES)} FA names from {DATA_FILE}")
     print(f"  → Loaded {len(rows)} rows from {DATA_FILE}")
     return rows
 
