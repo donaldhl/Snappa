@@ -169,14 +169,14 @@ def compute_player_stats(match_rows):
         p["bpg"]       = round(p["bpg_raw"] * pace_adj, 4) if p["bpg_raw"] is not None else None
         p["def_ratio"] = round(p["def_ratio_raw"] * pace_adj, 4) if p["def_ratio_raw"] is not None else None
 
-    # qSNER = aSNER * (15 / V44) where V44 = AVERAGE of aSNER for all players with GP>0
-    # This matches the sheet formula =AVERAGE(V3:V5,V7,...) which includes all non-DIV/0 rows
-    all_valid = [p for p in players if p["gp"] > 0 and p["mp"] > 0]
-    avg_a_sner_all = sum(p["a_sner"] for p in all_valid) / len(all_valid) if all_valid else 1.0
-    if avg_a_sner_all == 0:
-        avg_a_sner_all = 1.0
+    # qSNER = aSNER * (15 / avg_aSNER_of_qualifiers)
+    # Qualifiers = players with FGA >= MIN_FGA (100 tosses)
+    qualifiers = [p for p in players if p["mp"] >= MIN_FGA]
+    avg_a_sner_q = sum(p["a_sner"] for p in qualifiers) / len(qualifiers) if qualifiers else 1.0
+    if avg_a_sner_q == 0:
+        avg_a_sner_q = 1.0
     for p in players:
-        p["qSNER"] = round(p["a_sner"] * (15 / avg_a_sner_all), 4)
+        p["qSNER"] = round(p["a_sner"] * (15 / avg_a_sner_q), 4)
 
     # Clean up internal fields
     for p in players:
