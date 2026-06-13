@@ -30,12 +30,12 @@ TEAM_MAP = {
     "Joey": "Dumplings",   "Michael": "Dumplings", "Ian": "Dumplings",
     "Nathan": "Dumplings", "Audrey": "Dumplings",  "Nick": "Dumplings",
     "Sungwon": "Dumplings", "Jake": "Dumplings",   "Sam": "Dumplings",
-    "Su": "Dumplings",
+    "Su": "Dumplings", "Matt": "Dumplings", "Trevor": "Dumplings",
     # FA = everyone else
 }
 
 # Undrafted Free Agents shown in FA Bids tab
-FA_NAMES = ["Germaine", "Jen S", "Kate", "Ashley", "Gloria", "Liberty"]
+FA_NAMES = ["Germaine", "Jen S", "Kate", "Ashley", "Gloria", "Liberty", "Ben","Matt M", "Kevin", "Patrick", "Will H", "Jordan", "Joe", "Simon", "Manny"]
 
 # ── LOAD DATA ─────────────────────────────────────────────────────────────────
 def fetch_sheet_csv(sheet_name):
