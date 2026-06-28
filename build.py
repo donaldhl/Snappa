@@ -35,7 +35,7 @@ TEAM_MAP = {
 }
 
 # Undrafted Free Agents shown in FA Bids tab
-FA_NAMES = ["Germaine", "Jen S", "Kate", "Ashley", "Gloria", "Liberty", "Ben","Matt M", "Kevin", "Patrick", "Will H", "Jordan", "Joe", "Simon", "Manny", "Vijay", "Oliver", "Danny M"]
+FA_NAMES = ["Germaine", "Jen S", "Kate", "Ashley", "Gloria", "Liberty", "Ben","Matt M", "Kevin", "Patrick", "Will H", "Jordan", "Joe", "Simon", "Manny", "Vijay", "Oliver", "Danny M", "Sydney", "Colin"]
 
 # ── LOAD DATA ─────────────────────────────────────────────────────────────────
 def fetch_sheet_csv(sheet_name):
