@@ -30,7 +30,7 @@ TEAM_MAP = {
     "Joey": "Dumplings",   "Michael": "Dumplings", "Ian": "Dumplings",
     "Nathan": "Dumplings", "Audrey": "Dumplings",  "Nick": "Dumplings",
     "Sungwon": "Dumplings", "Jake": "Dumplings",   "Sam": "Dumplings",
-    "Su": "Dumplings", "Matt": "Dumplings", "Trevor": "Dumplings", "Colin": "Dumplings", "Manny": "Dumplings,
+    "Su": "Dumplings", "Matt": "Dumplings", "Trevor": "Dumplings", "Colin": "Dumplings", "Manny": "Dumplings",
     # FA = everyone else
 }
 
