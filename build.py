@@ -160,7 +160,12 @@ def compute_player_stats(match_rows):
         return players
 
     # Pace adjustment
-    avg_pace = sum(p["toss_pace"] for p in players) / len(players)
+    # Weighted by games played (total tosses / total games), not a plain
+    # per-player average — otherwise low-GP players skew the average pace
+    # far more than their actual volume of play justifies.
+    total_mp = sum(p["mp"] for p in players)
+    total_gp = sum(p["gp"] for p in players)
+    avg_pace = div(total_mp, total_gp, 1.0)
     for p in players:
         pace_adj = div(avg_pace, p["toss_pace"], 1.0)
         p["a_sner"] = p["u_sner"] * pace_adj
