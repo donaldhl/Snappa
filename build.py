@@ -16,10 +16,15 @@ MIN_FGA   = 100   # qualifier threshold (on_table + off_table)
 CORE_FGA  = 450   # Core SNER: players with FGA >= 450 ; Bench: MIN_FGA <= FGA < 450
 
 H2H_POINTS = 3    # points for winning the head-to-head record
-CAT_POINTS = 1    # points per category / individual award
+CAT_POINTS = 1    # points per team category, per individual leader, and per award
+
+# Individuals only appear in Top Individuals lists / awards if they have
+# at least INDIV_MIN_GP games played OR more than INDIV_MIN_FGA tosses.
+INDIV_MIN_GP  = 18
+INDIV_MIN_FGA = 450
 
 # Rookies of the year candidates — FILL THIS IN (names must match the sheet exactly)
-ROOKIES = ROOKIES = ["Janet", "Grandpa Juan", "Trevor", "Matt", "Colin", "Manny", "Germaine", "Ashley", "Gloria", "Matt M", "Kevin", "Patrick", "Will H", "Jordan", "Joe", "Simon", "Oliver", "Danny M", "Sydney", "Danny", "Matt C", "Derek", "Brandon", "Sarah"]
+ROOKIES = ["Janet", "Grandpa Juan", "Trevor", "Matt", "Colin", "Manny", "Germaine", "Ashley", "Gloria", "Matt M", "Kevin", "Patrick", "Will H", "Jordan", "Joe", "Simon", "Oliver", "Danny M", "Sydney", "Danny", "Matt C", "Derek", "Brandon", "Sarah"]
 # Most Improved: compares first half vs second half of the season's games.
 # Each half needs at least this many tosses for a player to be eligible.
 MIN_HALF_FGA = 40
@@ -301,6 +306,9 @@ def debug_report(players, rows):
     print("  Not in TEAM_MAP (FGA>=50): " + ", ".join(f'{p["name"]}:{p["mp"]}' for p in un))
     print("=== END DEBUG ===\n")
 
+def indiv_eligible(p):
+    return p["gp"] >= INDIV_MIN_GP or p["mp"] > INDIV_MIN_FGA
+
 # ── TEAM STATS & SCORING ──────────────────────────────────────────────────────
 def compute_team_stats(players, rows):
     T = ("Cream", "Dumplings")
@@ -331,8 +339,9 @@ def compute_team_stats(players, rows):
         core=tavg(t, "qSNER", CORE_FGA), bench=tavg(t, "qSNER", MIN_FGA, CORE_FGA),
     ) for t in T}
 
-    def top(key, n=3, lo=0, hi=None, fmt=str, val=None):
+    def top(key, n=3, lo=0, hi=None, fmt=str, val=None, elig=True):
         ps = [p for p in players if p["mp"] >= lo and (hi is None or p["mp"] < hi)
+              and (not elig or indiv_eligible(p))
               and (val(p) if val else p[key]) is not None]
         ps.sort(key=lambda p: -(val(p) if val else p[key]))
         return [(p["name"], p["team"], fmt(val(p) if val else p[key])) for p in ps[:n]]
@@ -349,12 +358,13 @@ def compute_team_stats(players, rows):
          top("", val=lambda p: p["pts_def"] + 2 * p["ex_pts_def"])),
         ("Beers", "beers", str, top("beers")),
         ("Refs", "refs", str, top("refs")),
-        (f"Core SNER (>{CORE_FGA} tosses)", "core", f2, top("qSNER", lo=CORE_FGA, fmt=f2)),
+        (f"Core SNER (>{CORE_FGA} tosses)", "core", f2, top("qSNER", lo=CORE_FGA, fmt=f2, elig=False)),
         (f"Bench SNER ({MIN_FGA}–{CORE_FGA} tosses)", "bench", f2,
-         top("qSNER", lo=MIN_FGA, hi=CORE_FGA, fmt=f2)),
+         top("qSNER", lo=MIN_FGA, hi=CORE_FGA, fmt=f2, elig=False)),
     ]
 
     pts = {"Cream": 0, "Dumplings": 0}
+    brk = {k: {"Cream": 0, "Dumplings": 0} for k in ("team", "ind", "h2h")}
     rows_out = []
     for label, key, fmt, tops in cats:
         c, d = M["Cream"][key], M["Dumplings"][key]
@@ -363,13 +373,17 @@ def compute_team_stats(players, rows):
             winner = "Cream" if c > d else "Dumplings"
         elif c is not None and d is None: winner = "Cream"
         elif d is not None and c is None: winner = "Dumplings"
-        if winner: pts[winner] += CAT_POINTS
+        if winner:
+            pts[winner] += CAT_POINTS; brk["team"][winner] += CAT_POINTS
+        # the #1 individual in the category also earns a point for their team
+        if tops and tops[0][1] in pts:
+            pts[tops[0][1]] += CAT_POINTS; brk["ind"][tops[0][1]] += CAT_POINTS
         rows_out.append((label, fmt(c) if c is not None else "—",
                          fmt(d) if d is not None else "—", winner, tops))
 
     # individual awards -> point goes to the winner's team
     imp = compute_improvement(rows, players)
-    quals = [p for p in players if p["qualified"]]
+    quals = [p for p in players if indiv_eligible(p)]
     rook = sorted([p for p in quals if p["name"] in ROOKIES], key=lambda p: -p["qSNER"])
     wr = sorted([p for p in quals if p["gp"] >= 1], key=lambda p: (-p["wr_pct"], -p["gp"]))
     byname = {p["name"]: p for p in players}
@@ -377,23 +391,24 @@ def compute_team_stats(players, rows):
     awards = [
         ("Rookie of the Year", [(p["name"], p["team"], f'qSNER {p["qSNER"]:.2f}') for p in rook[:3]],
          "" if ROOKIES else "Set ROOKIES in build.py"),
-        ("Most Improved Player", [(n, byname[n]["team"], f"{v:+.2f} SNER/toss") for n, v in mi[:3] if n in byname],
+        ("Most Improved Player", [(n, byname[n]["team"], f"{v:+.2f} SNER/toss") for n, v in [kv for kv in mi if kv[0] in byname and indiv_eligible(byname[kv[0]])][:3]],
          "2nd half vs 1st half of games"),
         ("Highest Win Rate", [(p["name"], p["team"], pct(p["wr_pct"]) + f' ({p["gp"]} GP)') for p in wr[:3]],
-         "Qualifiers only"),
+         f"Eligible: {INDIV_MIN_GP}+ GP or >{INDIV_MIN_FGA} tosses"),
     ]
     for _, lst, _n in awards:
         if lst and lst[0][1] in pts:
-            pts[lst[0][1]] += CAT_POINTS
+            pts[lst[0][1]] += CAT_POINTS; brk["ind"][lst[0][1]] += CAT_POINTS
 
     h2h_winner = "Cream" if rec["Cream"] > rec["Dumplings"] else "Dumplings" if rec["Dumplings"] > rec["Cream"] else None
     if h2h_winner:
-        pts[h2h_winner] += H2H_POINTS
+        pts[h2h_winner] += H2H_POINTS; brk["h2h"][h2h_winner] += H2H_POINTS
 
     tiles = dict(
         games=len(games), beers=tot["all"]["beers"],
         shotguns=tot["all"]["shotguns"], sinks=tot["all"]["sinks"],
-        pts=pts,
+        pts=pts, brk=brk,
+        max_pts=len(cats) + sum(1 for c in cats if c[1] != "qualifiers") + len(awards) + H2H_POINTS,
     )
     return tiles, rec, h2h_winner, rows_out, awards
 
@@ -408,12 +423,13 @@ def tops_html(tops):
     out = []
     for i, (n, t, v) in enumerate(tops, 1):
         m = {1: "g1", 2: "g2", 3: "g3"}.get(i, "gn")
+        tag = '<span class="ptag">+1</span>' if i == 1 and t in ICON else ""
         out.append(f'<div class="ti"><span class="medal sm {m}">{i}</span> {ICON.get(t, "🆓")} '
-                   f'<span class="tn">{esc(n)}</span> <span class="dimtxt">{esc(v)}</span></div>')
+                   f'<span class="tn">{esc(n)}</span> <span class="dimtxt">{esc(v)}</span>{tag}</div>')
     return "".join(out)
 
 def team_tab(tiles, rec, h2h_winner, cats, awards):
-    p = tiles["pts"]
+    p = tiles["pts"]; b = tiles["brk"]
     def hi(w, t): return " hi" if w == t else ""
     body = [f'<tr><td class="dim">Head-to-Head Record <span class="pt">({H2H_POINTS} pts)</span></td>'
             f'<td class="vc{hi(h2h_winner,"Cream")}">{rec["Cream"]} – {rec["Dumplings"]}</td>'
@@ -435,7 +451,8 @@ def team_tab(tiles, rec, h2h_winner, cats, awards):
       <div class="vs">vs</div>
       <div class="side du"><span>🥟 Dumplings</span><b>{p['Dumplings']}</b></div>
     </div>
-    <div class="note">1 pt per category or award · {H2H_POINTS} pts for head-to-head · ties score no point</div>
+    <div class="brk">Team categories <b>{b['team']['Cream']}–{b['team']['Dumplings']}</b> · Individual leaders &amp; awards <b>{b['ind']['Cream']}–{b['ind']['Dumplings']}</b> · Head-to-head <b>{b['h2h']['Cream']}–{b['h2h']['Dumplings']}</b></div>
+    <div class="note">{tiles['max_pts']} points available · 1 pt per team category, 1 pt for each #1 individual (their team), {H2H_POINTS} pts head-to-head · ties score no point</div>
   </div>
   <div class="tiles">
     <div class="tile"><div class="tv">{tiles['games']}</div><div class="tl">Games Played</div></div>
@@ -454,7 +471,7 @@ def team_tab(tiles, rec, h2h_winner, cats, awards):
       <tbody>{"".join(body)}</tbody>
     </table>
   </div>
-  <div class="sec-label">Individual Awards <span style="text-transform:none;letter-spacing:0">(point goes to the winner's team)</span></div>
+  <div class="sec-label">Individual Awards <span style="text-transform:none;letter-spacing:0">(#1 earns a point for their team)</span></div>
   <div class="cards">{"".join(aw)}</div>"""
 
 TEMPLATE = r"""<!DOCTYPE html>
@@ -521,6 +538,8 @@ td.vc{text-align:center;font-size:12px}
 .tiles{display:grid;grid-template-columns:repeat(auto-fit,minmax(130px,1fr));gap:8px;margin-bottom:14px}
 .tile{border:1px solid #e5e7eb;border-radius:10px;padding:12px;text-align:center;background:#f9fafb}
 .tv{font-size:24px;font-weight:600}.tl{font-size:10px;font-weight:600;color:#6b7280;text-transform:uppercase;letter-spacing:.05em;margin-top:2px}
+.ptag{font-size:10px;font-weight:700;color:#085041;background:#E1F5EE;border:1px solid #9FE1CB;border-radius:10px;padding:0 5px;margin-left:4px}
+.brk{font-size:12px;color:#374151;margin-top:4px}
 .note{font-size:11px;color:#6b7280;margin-top:6px}.pt{color:#9ca3af;font-size:11px}
 .sec-label{font-size:11px;font-weight:600;color:#9ca3af;text-transform:uppercase;letter-spacing:.05em;margin:18px 0 8px}
 .cards{display:grid;grid-template-columns:repeat(auto-fit,minmax(240px,1fr));gap:8px}
