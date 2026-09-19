@@ -21,6 +21,10 @@ CAT_POINTS = 1    # points per team category, per individual leader, and per awa
 # Individuals only appear in Top Individuals lists / awards if they have
 # at least INDIV_MIN_GP games played OR more than INDIV_MIN_FGA tosses.
 INDIV_MIN_GP  = 18
+
+# Most Improved Player needs last season's data, which the sheet does not have yet.
+# Set to True once that data is available (the award is then scored again).
+ENABLE_MIP = False
 INDIV_MIN_FGA = 450
 
 # Rookies of the year candidates — FILL THIS IN (names must match the sheet exactly)
@@ -217,6 +221,8 @@ def row_team_totals(rows):
     even if they have no toss rows."""
     T = {t: dict(beers=0, sinks=0, pts_def=0, ex_pts_def=0, shotguns=0, refs=0)
          for t in ("Cream", "Dumplings")}
+    for t in ("Cream", "Dumplings"):
+        T[t].update(on_table=0, off_table=0, points=0, pot_pts=0)
     allt = dict(beers=0, sinks=0, shotguns=0, refs=0)
     pgt = {}
     for row in rows:
@@ -234,6 +240,10 @@ def row_team_totals(rows):
             T[t]["sinks"]      += safe_int(row.get("Sink", 0))
             T[t]["pts_def"]    += safe_int(row.get("Points Defended", 0))
             T[t]["ex_pts_def"] += safe_int(row.get("Extreme Points Defended", 0))
+            T[t]["on_table"]   += safe_int(row.get("On Table", 0))
+            T[t]["off_table"]  += safe_int(row.get("Off Table", 0))
+            T[t]["points"]     += safe_int(row.get("Points", 0))
+            T[t]["pot_pts"]    += safe_int(row.get("Potential Points", 0))
         sg = str(row.get("Shotgun", "")).strip()
         if sg and g and (g, sg) not in seen_sg:
             seen_sg.add((g, sg)); allt["shotguns"] += 1
@@ -286,12 +296,22 @@ def debug_report(players, rows):
                             "player-table via TEAM_MAP": by_map("beers")})
     show("Refs", "refs", {"row Ref Team / Ref name (deduped)": tuple(tot[t]["refs"] for t in T),
                           "player-table via TEAM_MAP": by_map("refs")})
-    for key, lab in (("fg_pct", "FG %"), ("tfg_pct", "TFG %")):
-        avg = tuple(100 * sum(p[key] for p in q(t, MIN_FGA)) / max(1, len(q(t, MIN_FGA))) for t in T)
-        pooled = tuple(100 * sum(p[key] * p["mp"] for p in q(t, MIN_FGA)) /
-                       max(1, sum(p["mp"] for p in q(t, MIN_FGA))) for t in T)
-        show(lab, "fg" if key == "fg_pct" else "tfg",
-             {"avg of qualifiers (current)": avg, "pooled (weighted by tosses)": pooled})
+    def pooled_rows(fn):
+        return tuple(100 * fn(tot[t]) / max(1, tot[t]["on_table"] + tot[t]["off_table"]) for t in T)
+    def avg_q(key):
+        return tuple(100 * sum(p[key] for p in q(t, MIN_FGA)) / max(1, len(q(t, MIN_FGA))) for t in T)
+    def pooled_q(key):
+        return tuple(100 * sum(p[key] * p["mp"] for p in q(t, MIN_FGA)) /
+                     max(1, sum(p["mp"] for p in q(t, MIN_FGA))) for t in T)
+    show("FG %", "fg", {
+        "pooled, all rows by Team (current)": pooled_rows(lambda x: x["on_table"]),
+        "pooled, qualifiers only": pooled_q("fg_pct"),
+        "simple avg of qualifiers (old)": avg_q("fg_pct")})
+    show("TFG %", "tfg", {
+        "pooled (Points+Potential)/tosses (current)": pooled_rows(lambda x: x["points"] + x["pot_pts"]),
+        "pooled Points/tosses only": pooled_rows(lambda x: x["points"]),
+        "pooled, qualifiers only": pooled_q("tfg_pct"),
+        "simple avg of qualifiers (old)": avg_q("tfg_pct")})
     avgq = lambda ps: (sum(p["qSNER"] for p in ps) / len(ps)) if ps else None
     show("Core SNER", "core", {f"avg qSNER, FGA >= {CORE_FGA}": tuple(avgq(q(t, CORE_FGA)) for t in T),
                                 f"avg qSNER, FGA >  {CORE_FGA}": tuple(avgq(q(t, CORE_FGA, True)) for t in T)})
@@ -335,7 +355,8 @@ def compute_team_stats(players, rows):
         qualifiers=sum(1 for p in players if p["team"] == t and p["qualified"]),
         shotguns=tot[t]["shotguns"], sinks=tot[t]["sinks"], beers=tot[t]["beers"],
         refs=tot[t]["refs"], pts_def=tot[t]["pts_def"] + 2 * tot[t]["ex_pts_def"],
-        fg=tavg(t, "fg_pct", MIN_FGA), tfg=tavg(t, "tfg_pct", MIN_FGA),
+        fg=div(tot[t]["on_table"], tot[t]["on_table"] + tot[t]["off_table"]),
+        tfg=div(tot[t]["points"] + tot[t]["pot_pts"], tot[t]["on_table"] + tot[t]["off_table"]),
         core=tavg(t, "qSNER", CORE_FGA), bench=tavg(t, "qSNER", MIN_FGA, CORE_FGA),
     ) for t in T}
 
@@ -391,8 +412,9 @@ def compute_team_stats(players, rows):
     awards = [
         ("Rookie of the Year", [(p["name"], p["team"], f'qSNER {p["qSNER"]:.2f}') for p in rook[:3]],
          "" if ROOKIES else "Set ROOKIES in build.py"),
-        ("Most Improved Player", [(n, byname[n]["team"], f"{v:+.2f} SNER/toss") for n, v in [kv for kv in mi if kv[0] in byname and indiv_eligible(byname[kv[0]])][:3]],
-         "2nd half vs 1st half of games"),
+        ("Most Improved Player", [(n, byname[n]["team"], f"{v:+.2f} SNER/toss") for n, v in [kv for kv in mi if kv[0] in byname and indiv_eligible(byname[kv[0]])][:3]]
+         if ENABLE_MIP else [],
+         "2nd half vs 1st half of games" if ENABLE_MIP else "Coming soon — needs last season's data"),
         ("Highest Win Rate", [(p["name"], p["team"], pct(p["wr_pct"]) + f' ({p["gp"]} GP)') for p in wr[:3]],
          f"Eligible: {INDIV_MIN_GP}+ GP or >{INDIV_MIN_FGA} tosses"),
     ]
@@ -408,7 +430,7 @@ def compute_team_stats(players, rows):
         games=len(games), beers=tot["all"]["beers"],
         shotguns=tot["all"]["shotguns"], sinks=tot["all"]["sinks"],
         pts=pts, brk=brk,
-        max_pts=len(cats) + sum(1 for c in cats if c[1] != "qualifiers") + len(awards) + H2H_POINTS,
+        max_pts=len(cats) + sum(1 for c in cats if c[1] != "qualifiers") + len(awards) - (0 if ENABLE_MIP else 1) + H2H_POINTS,
     )
     return tiles, rec, h2h_winner, rows_out, awards
 
