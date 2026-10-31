@@ -12,8 +12,9 @@ from datetime import date
 DATA_FILE   = "data.json"
 OUTPUT_PATH = "index.html"
 
-MIN_FGA   = 100   # qualifier threshold (on_table + off_table)
-CORE_FGA  = 450   # Core SNER: players with FGA >= 450 ; Bench: MIN_FGA <= FGA < 450
+MIN_FGA       = 100   # qualifier threshold (on_table + off_table)
+CORE_FGA      = 450   # Core: tosses > 450 ; Bench: tosses <= 450
+BENCH_MIN_FGA = 0     # set to MIN_FGA if your sheet only counts qualifiers on the bench
 
 H2H_POINTS = 3    # points for winning the head-to-head record
 CAT_POINTS = 1    # points per team category, per individual leader, and per award
@@ -21,11 +22,11 @@ CAT_POINTS = 1    # points per team category, per individual leader, and per awa
 # Individuals only appear in Top Individuals lists / awards if they have
 # at least INDIV_MIN_GP games played OR more than INDIV_MIN_FGA tosses.
 INDIV_MIN_GP  = 18
+INDIV_MIN_FGA = 450
 
 # Most Improved Player needs last season's data, which the sheet does not have yet.
 # Set to True once that data is available (the award is then scored again).
 ENABLE_MIP = False
-INDIV_MIN_FGA = 450
 
 # Rookies of the year candidates — FILL THIS IN (names must match the sheet exactly)
 ROOKIES = ["Janet", "Grandpa Juan", "Trevor", "Matt", "Colin", "Manny", "Germaine", "Ashley", "Gloria", "Matt M", "Kevin", "Patrick", "Will H", "Jordan", "Joe", "Simon", "Oliver", "Danny M", "Sydney", "Danny", "Matt C", "Derek", "Brandon", "Sarah"]
@@ -168,6 +169,10 @@ def compute_players(rows):
         p["ppg"] = round(p["_ppg"] * adj, 4)
         p["bpg"] = round(p["_bpg"] * adj, 4)
         p["def_ratio"] = round(p["_def"] * adj, 4) if p["_def"] is not None else None
+        # pace-adjusted per-game rates, used for the individual category leaders
+        p["sinks_pg"]   = round(div(p["sinks"], p["gp"]) * adj, 4)
+        p["pts_def_pg"] = round(div(p["pts_def"] + 2 * p["ex_pts_def"], p["gp"]) * adj, 4)
+        # p["bpg"] is already pace-adjusted beers per game
 
     quals = [p for p in players if p["mp"] >= MIN_FGA]
     avg_q = (sum(p["_a"] for p in quals) / len(quals)) if quals else 1.0
@@ -313,10 +318,11 @@ def debug_report(players, rows):
         "pooled, qualifiers only": pooled_q("tfg_pct"),
         "simple avg of qualifiers (old)": avg_q("tfg_pct")})
     avgq = lambda ps: (sum(p["qSNER"] for p in ps) / len(ps)) if ps else None
-    show("Core SNER", "core", {f"avg qSNER, FGA >= {CORE_FGA}": tuple(avgq(q(t, CORE_FGA)) for t in T),
-                                f"avg qSNER, FGA >  {CORE_FGA}": tuple(avgq(q(t, CORE_FGA, True)) for t in T)})
+    show("Core SNER", "core", {f"avg qSNER, FGA >  {CORE_FGA}": tuple(avgq(q(t, CORE_FGA, True)) for t in T),
+                                f"avg qSNER, FGA >= {CORE_FGA}": tuple(avgq(q(t, CORE_FGA)) for t in T)})
     show("Bench SNER", "bench", {
-        f"avg qSNER, {MIN_FGA} <= FGA < {CORE_FGA}": tuple(avgq([p for p in q(t, MIN_FGA) if p["mp"] < CORE_FGA]) for t in T)})
+        f"avg qSNER, FGA <= {CORE_FGA} (floor {BENCH_MIN_FGA})":
+            tuple(avgq([p for p in q(t, BENCH_MIN_FGA) if p["mp"] <= CORE_FGA]) for t in T)})
 
     print("\nPlayers by team with FGA (compare to who your sheet counts as a qualifier):")
     for t in T:
@@ -357,7 +363,8 @@ def compute_team_stats(players, rows):
         refs=tot[t]["refs"], pts_def=tot[t]["pts_def"] + 2 * tot[t]["ex_pts_def"],
         fg=div(tot[t]["on_table"], tot[t]["on_table"] + tot[t]["off_table"]),
         tfg=div(tot[t]["points"] + tot[t]["pot_pts"], tot[t]["on_table"] + tot[t]["off_table"]),
-        core=tavg(t, "qSNER", CORE_FGA), bench=tavg(t, "qSNER", MIN_FGA, CORE_FGA),
+        core=tavg(t, "qSNER", CORE_FGA + 1),                    # all team players with > 450 tosses
+        bench=tavg(t, "qSNER", BENCH_MIN_FGA, CORE_FGA + 1),    # all team players with <= 450 tosses
     ) for t in T}
 
     def top(key, n=3, lo=0, hi=None, fmt=str, val=None, elig=True):
@@ -369,19 +376,21 @@ def compute_team_stats(players, rows):
 
     pct = lambda v: f"{v*100:.1f}%"
     f2 = lambda v: f"{v:.2f}"
+    pg = lambda v: f"{v:.2f}/g"
     cats = [
         ("Most Qualifiers", "qualifiers", str, []),
         ("Shotguns", "shotguns", str, top("shotguns")),
         ("FG %", "fg", pct, top("fg_pct", lo=MIN_FGA, fmt=pct)),
         ("TFG %", "tfg", pct, top("tfg_pct", lo=MIN_FGA, fmt=pct)),
-        ("Sinks", "sinks", str, top("sinks")),
-        ("Pts Defended (Extreme = 2)", "pts_def", str,
-         top("", val=lambda p: p["pts_def"] + 2 * p["ex_pts_def"])),
-        ("Beers", "beers", str, top("beers")),
+        ("Sinks (leader: pace-adj. per game)", "sinks", str, top("sinks_pg", fmt=pg)),
+        ("Pts Defended (Extreme = 2; leader: pace-adj. per game)", "pts_def", str,
+         top("pts_def_pg", fmt=pg)),
+        ("Beers (leader: pace-adj. per game)", "beers", str, top("bpg", fmt=pg)),
         ("Refs", "refs", str, top("refs")),
-        (f"Core SNER (>{CORE_FGA} tosses)", "core", f2, top("qSNER", lo=CORE_FGA, fmt=f2, elig=False)),
-        (f"Bench SNER ({MIN_FGA}–{CORE_FGA} tosses)", "bench", f2,
-         top("qSNER", lo=MIN_FGA, hi=CORE_FGA, fmt=f2, elig=False)),
+        (f"Core SNER (>{CORE_FGA} tosses)", "core", f2,
+         top("qSNER", lo=CORE_FGA + 1, fmt=f2)),
+        (f"Bench SNER (≤{CORE_FGA} tosses)", "bench", f2,
+         top("qSNER", lo=BENCH_MIN_FGA, hi=CORE_FGA + 1, fmt=f2)),
     ]
 
     pts = {"Cream": 0, "Dumplings": 0}
