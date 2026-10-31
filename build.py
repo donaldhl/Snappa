@@ -28,6 +28,16 @@ INDIV_MIN_FGA = 450
 # Set to True once that data is available (the award is then scored again).
 ENABLE_MIP = False
 
+# ── MANUAL AWARD OVERRIDES ────────────────────────────────────────────────────
+# Type player names EXACTLY as they appear in the sheet, in order (1st place first).
+# Each pick is shown with their stats. The #1 name earns the award point for their team.
+# Use [] to let the script calculate it automatically (Rookie) or show "coming soon"
+# (Most Improved). A manual list always overrides the automatic result.
+MANUAL_ROOKIE = ["Sam"]
+MANUAL_MIP    = ["Derik", "Andrew", "Don"]
+MANUAL_NOTE   = "Selected by league commissioner"   # small caption under a manual pick
+# ──────────────────────────────────────────────────────────────────────────────
+
 # Rookies of the year candidates — FILL THIS IN (names must match the sheet exactly)
 ROOKIES = ["Janet", "Grandpa Juan", "Trevor", "Matt", "Colin", "Manny", "Germaine", "Ashley", "Gloria", "Matt M", "Kevin", "Patrick", "Will H", "Jordan", "Joe", "Simon", "Oliver", "Danny M", "Sydney", "Danny", "Matt C", "Derek", "Brandon", "Sarah"]
 # Most Improved: compares first half vs second half of the season's games.
@@ -382,15 +392,17 @@ def compute_team_stats(players, rows):
         ("Shotguns", "shotguns", str, top("shotguns")),
         ("FG %", "fg", pct, top("fg_pct", lo=MIN_FGA, fmt=pct)),
         ("TFG %", "tfg", pct, top("tfg_pct", lo=MIN_FGA, fmt=pct)),
-        ("Sinks (leader: pace-adj. per game)", "sinks", str, top("sinks_pg", fmt=pg)),
-        ("Pts Defended (Extreme = 2; leader: pace-adj. per game)", "pts_def", str,
-         top("pts_def_pg", fmt=pg)),
+        ("Sinks", "sinks", str, top("sinks")),
+        ("Pts Defended (Extreme = 2)", "pts_def", str,
+         top("", val=lambda p: p["pts_def"] + 2 * p["ex_pts_def"])),
         ("Beers (leader: pace-adj. per game)", "beers", str, top("bpg", fmt=pg)),
         ("Refs", "refs", str, top("refs")),
         (f"Core SNER (>{CORE_FGA} tosses)", "core", f2,
-         top("qSNER", lo=CORE_FGA + 1, fmt=f2)),
+         top("qSNER", lo=CORE_FGA + 1, fmt=f2, elig=False)),
+        # Bench top 3: qualifiers (>= MIN_FGA tosses) with <= CORE_FGA tosses.
+        # The 18 GP / >450 tosses rule is skipped here, since bench players are under 450 tosses.
         (f"Bench SNER (≤{CORE_FGA} tosses)", "bench", f2,
-         top("qSNER", lo=BENCH_MIN_FGA, hi=CORE_FGA + 1, fmt=f2)),
+         top("qSNER", lo=MIN_FGA, hi=CORE_FGA + 1, fmt=f2, elig=False)),
     ]
 
     pts = {"Cream": 0, "Dumplings": 0}
@@ -418,12 +430,38 @@ def compute_team_stats(players, rows):
     wr = sorted([p for p in quals if p["gp"] >= 1], key=lambda p: (-p["wr_pct"], -p["gp"]))
     byname = {p["name"]: p for p in players}
     mi = sorted(imp.items(), key=lambda kv: -kv[1])
+    def manual_pick(names):
+        if isinstance(names, str):
+            names = [names]
+        out = []
+        for n in [x.strip() for x in names if x.strip()]:
+            p = byname.get(n)
+            team = p["team"] if p else TEAM_MAP.get(n, "Free Agent")
+            detail = (f'qSNER {p["qSNER"]:.2f} · FG {pct(p["fg_pct"])} · '
+                      f'{p["gp"]} GP · {p["mp"]} tosses') if p else "no stats yet"
+            out.append((n, team, detail))
+        return out
+
+    manual_rookie = manual_pick(MANUAL_ROOKIE)
+    manual_mip = manual_pick(MANUAL_MIP)
+    if manual_rookie:
+        rookie_award = ("Rookie of the Year", manual_rookie, MANUAL_NOTE)
+    else:
+        rookie_award = ("Rookie of the Year",
+                        [(p["name"], p["team"], f'qSNER {p["qSNER"]:.2f}') for p in rook[:3]],
+                        "" if ROOKIES else "Set ROOKIES in build.py")
+    if manual_mip:
+        mip_award = ("Most Improved Player", manual_mip, MANUAL_NOTE)
+    elif ENABLE_MIP:
+        mip_award = ("Most Improved Player",
+                     [(n, byname[n]["team"], f"{v:+.2f} SNER/toss")
+                      for n, v in [kv for kv in mi if kv[0] in byname and indiv_eligible(byname[kv[0]])][:3]],
+                     "2nd half vs 1st half of games")
+    else:
+        mip_award = ("Most Improved Player", [], "Coming soon — needs last season's data")
     awards = [
-        ("Rookie of the Year", [(p["name"], p["team"], f'qSNER {p["qSNER"]:.2f}') for p in rook[:3]],
-         "" if ROOKIES else "Set ROOKIES in build.py"),
-        ("Most Improved Player", [(n, byname[n]["team"], f"{v:+.2f} SNER/toss") for n, v in [kv for kv in mi if kv[0] in byname and indiv_eligible(byname[kv[0]])][:3]]
-         if ENABLE_MIP else [],
-         "2nd half vs 1st half of games" if ENABLE_MIP else "Coming soon — needs last season's data"),
+        rookie_award,
+        mip_award,
         ("Highest Win Rate", [(p["name"], p["team"], pct(p["wr_pct"]) + f' ({p["gp"]} GP)') for p in wr[:3]],
          f"Eligible: {INDIV_MIN_GP}+ GP or >{INDIV_MIN_FGA} tosses"),
     ]
@@ -439,7 +477,7 @@ def compute_team_stats(players, rows):
         games=len(games), beers=tot["all"]["beers"],
         shotguns=tot["all"]["shotguns"], sinks=tot["all"]["sinks"],
         pts=pts, brk=brk,
-        max_pts=len(cats) + sum(1 for c in cats if c[1] != "qualifiers") + len(awards) - (0 if ENABLE_MIP else 1) + H2H_POINTS,
+        max_pts=len(cats) + sum(1 for c in cats if c[1] != "qualifiers") + len(awards) - (0 if (ENABLE_MIP or bool(manual_mip)) else 1) + H2H_POINTS,
     )
     return tiles, rec, h2h_winner, rows_out, awards
 
